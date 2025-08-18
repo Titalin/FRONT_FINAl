@@ -15,7 +15,7 @@ import {
   Lock as LockersIcon,
   Subscriptions as SubscriptionsIcon
 } from '@mui/icons-material';
-import Sidebar from '../../components/Layout/Sidebar';
+import Sidebar from '../components/Layout/Sidebar';
 import { jwtDecode } from 'jwt-decode';
 import api from '../services/api';
 

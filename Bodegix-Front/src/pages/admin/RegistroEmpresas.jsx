@@ -21,7 +21,7 @@ import {
   Divider,
   Skeleton,
 } from '@mui/material';
-import Sidebar from '../../components/Layout/Sidebar';
+import Sidebar from '..//components/Layout/Sidebar';
 
 // Icons
 import BusinessIcon from '@mui/icons-material/Business';
@@ -33,7 +33,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import GroupIcon from '@mui/icons-material/Group';
 import SaveIcon from '@mui/icons-material/Save';
 import ClearIcon from '@mui/icons-material/Clear';
-import api from '../../services/api';
+import api from '../services/api';
 
 // ---------- Helpers de normalización ----------
 const toKey = (v) => {

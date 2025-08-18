@@ -3,8 +3,8 @@ import {
   Box, Paper, Grid, Typography, TextField, Button, Alert, CircularProgress, Avatar,
   IconButton, Divider, InputAdornment, Tooltip, Chip,
 } from '@mui/material';
-import Sidebar from '../../components/Layout/Sidebar';
-import { AuthContext } from '../../context/AuthContext';
+import Sidebar from '..//components/Layout/Sidebar';
+import { AuthContext } from '../context/AuthContext';
 import { jwtDecode } from 'jwt-decode';
 import EditIcon from '@mui/icons-material/Edit';
 import EmailIcon from '@mui/icons-material/Email';
@@ -12,7 +12,7 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import LockIcon from '@mui/icons-material/Lock';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import api from '../../services/api';
+import api from '../services/api';
 
 const SettingsPage = () => {
   const { user } = useContext(AuthContext);
