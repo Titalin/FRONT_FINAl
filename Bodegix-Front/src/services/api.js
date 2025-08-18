@@ -26,15 +26,60 @@ if (isProd && /localhost/i.test(baseURL)) {
   throw new Error(`[API] baseURL inválido en producción: ${baseURL}`);
 }
 
-const api = axios.create({ baseURL });
+// Crea cliente
+const api = axios.create({
+  baseURL,
+  // timeout: 15000, // opcional
+});
 
-// Adjunta token automaticamente
+// Adjunta token automáticamente
 api.interceptors.request.use((config) => {
   try {
-    const token = localStorage.getItem('token');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+    if (isBrowser) {
+      const token = localStorage.getItem('token');
+      if (token) config.headers.Authorization = `Bearer ${token}`;
+    }
   } catch (_) {}
   return config;
 });
+
+// Manejo centralizado de respuestas/errores
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const msg =
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error?.message ||
+      'Error de red';
+
+    if (status === 401) {
+      // Sesión expirada o token inválido
+      if (isBrowser) {
+        try { localStorage.removeItem('token'); } catch (_) {}
+        // Evita múltiples alerts encadenados
+        if (!window.__BODEGIX__SEEN_401) {
+          window.__BODEGIX__SEEN_401 = true;
+          alert('Tu sesión expiró. Ingresa nuevamente.');
+        }
+        window.location.href = '/login';
+      }
+    }
+
+    if (status === 402) {
+      // Suscripción requerida/inactiva
+      if (isBrowser) {
+        if (!window.__BODEGIX__SEEN_402) {
+          window.__BODEGIX__SEEN_402 = true;
+          alert(msg || 'Tu suscripción no está activa. Actívala para administrar lockers.');
+        }
+        window.location.href = '/cliente/suscripciones';
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export default api;

@@ -1,5 +1,5 @@
 // src/pages/admin/RegistroEmpresas.jsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -33,6 +33,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import GroupIcon from '@mui/icons-material/Group';
 import SaveIcon from '@mui/icons-material/Save';
 import ClearIcon from '@mui/icons-material/Clear';
+
 import api from '../../services/api';
 
 // ---------- Helpers de normalización ----------
@@ -106,29 +107,31 @@ const RegistroEmpresas = () => {
   const [loadingAction, setLoadingAction] = useState(false);
   const [error, setError] = useState('');
 
-  const token = localStorage.getItem('token');
+  const arr = (v) => (Array.isArray(v) ? v : v?.data ?? v?.empresas ?? v?.items ?? []);
 
-  const fetchEmpresasYUsuarios = async () => {
+  const fetchEmpresasYUsuarios = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
-      const [empRes, usrRes] = await Promise.all([
-        fetch('/empresas', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('/usuarios/admin', { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
 
-      const empresasDataRaw = await empRes.json().catch(() => []);
-      const usuariosDataRaw = await usrRes.json().catch(() => []);
-
-      const empresasFuente = Array.isArray(empresasDataRaw)
-        ? empresasDataRaw
-        : empresasDataRaw?.data ?? empresasDataRaw?.empresas ?? empresasDataRaw?.items ?? [];
-
-      const usuariosFuente = Array.isArray(usuariosDataRaw)
-        ? usuariosDataRaw
-        : usuariosDataRaw?.data ?? usuariosDataRaw?.usuarios ?? usuariosDataRaw?.items ?? [];
-
+      // Empresas
+      const empRes = await api.get('empresas');
+      const empresasFuente = arr(empRes.data);
       const empresasNormalizadas = empresasFuente.map(normalizeEmpresa);
+
+      // Usuarios: intenta /usuarios; si no existe, cae a /usuarios/admin
+      let usuariosFuente = [];
+      try {
+        const usrAll = await api.get('usuarios');
+        usuariosFuente = arr(usrAll.data);
+      } catch (e1) {
+        try {
+          const usrAdmins = await api.get('usuarios/admin');
+          usuariosFuente = arr(usrAdmins.data);
+        } catch (e2) {
+          usuariosFuente = [];
+        }
+      }
       const usuariosNormalizados = usuariosFuente.map(normalizeUsuario);
 
       setEmpresas(empresasNormalizadas);
@@ -136,15 +139,16 @@ const RegistroEmpresas = () => {
     } catch (err) {
       console.error('Error al obtener empresas o usuarios:', err);
       setError('No se pudieron cargar los datos. Intenta nuevamente.');
+      setEmpresas([]);
+      setUsuarios([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchEmpresasYUsuarios();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [fetchEmpresasYUsuarios]);
 
   // Conteos por empresa (empleados y admins)
   const conteosPorKey = useMemo(() => {
@@ -184,21 +188,12 @@ const RegistroEmpresas = () => {
     e.preventDefault();
     try {
       setLoadingAction(true);
-      const res = await fetch('/empresas', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formEmpresa),
-      });
-
-      if (!res.ok) throw new Error('Error al registrar empresa');
+      await api.post('empresas', formEmpresa);
       await fetchEmpresasYUsuarios();
       setFormEmpresa({ nombre: '', telefono: '', direccion: '' });
     } catch (err) {
       console.error(err);
-      setError(err.message || 'No se pudo registrar la empresa.');
+      setError(err?.response?.data?.error || 'No se pudo registrar la empresa.');
     } finally {
       setLoadingAction(false);
     }
@@ -221,22 +216,13 @@ const RegistroEmpresas = () => {
 
     try {
       setLoadingAction(true);
-      const res = await fetch(`/empresas/${empresaSeleccionada.id}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formEmpresa),
-      });
-
-      if (!res.ok) throw new Error('Error al actualizar empresa');
+      await api.put(`empresas/${empresaSeleccionada.id}`, formEmpresa);
       await fetchEmpresasYUsuarios();
       setEmpresaSeleccionada(null);
       setFormEmpresa({ nombre: '', telefono: '', direccion: '' });
     } catch (err) {
       console.error(err);
-      setError(err.message || 'No se pudo actualizar la empresa.');
+      setError(err?.response?.data?.error || 'No se pudo actualizar la empresa.');
     } finally {
       setLoadingAction(false);
     }
@@ -253,25 +239,16 @@ const RegistroEmpresas = () => {
 
     try {
       setLoadingAction(true);
-      const res = await fetch('/usuarios', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formAdmin,
-          rol_id: 2, // Admin Empresa
-          empresa_id: empresaSeleccionada.id,
-        }),
+      await api.post('usuarios', {
+        ...formAdmin,
+        rol_id: 2, // Admin Empresa
+        empresa_id: empresaSeleccionada.id,
       });
-
-      if (!res.ok) throw new Error('Error al crear usuario admin empresa');
       await fetchEmpresasYUsuarios();
       setFormAdmin({ nombre: '', correo: '', contraseña: '' });
     } catch (err) {
       console.error(err);
-      setError(err.message || 'No se pudo crear el admin de empresa.');
+      setError(err?.response?.data?.error || 'No se pudo crear el admin de empresa.');
     } finally {
       setLoadingAction(false);
     }
