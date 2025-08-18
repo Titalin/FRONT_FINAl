@@ -25,6 +25,7 @@ import {
 import Logo from '../common/Logo';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import api from '../../services/api'; // ⬅️ usa el cliente axios con baseURL correcto
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -32,21 +33,16 @@ const Sidebar = () => {
   const { user, logout } = React.useContext(AuthContext);
 
   const handleLogout = async () => {
-    const token = localStorage.getItem('token');
     try {
-      await fetch('http://localhost:5000/api/usuarios/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // El interceptor ya adjunta el token, no pongas headers manuales
+      await api.post('usuarios/logout');
     } catch (error) {
       console.error('Error al cerrar sesión en backend:', error);
+    } finally {
+      localStorage.removeItem('token');
+      logout();
+      navigate('/login');
     }
-    localStorage.removeItem('token');
-    logout();
-    navigate('/login');
   };
 
   const isSuperAdmin = user?.rol_id === 1;
