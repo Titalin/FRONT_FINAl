@@ -21,7 +21,7 @@ import {
   Divider,
   Skeleton,
 } from '@mui/material';
-import Sidebar from '..//components/Layout/Sidebar';
+import Sidebar from '../../components/Layout/Sidebar';
 
 // Icons
 import BusinessIcon from '@mui/icons-material/Business';

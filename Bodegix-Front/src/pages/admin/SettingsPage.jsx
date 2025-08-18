@@ -3,7 +3,7 @@ import {
   Box, Paper, Grid, Typography, TextField, Button, Alert, CircularProgress, Avatar,
   IconButton, Divider, InputAdornment, Tooltip, Chip,
 } from '@mui/material';
-import Sidebar from '..//components/Layout/Sidebar';
+import Sidebar from '../../components/Layout/Sidebar';
 import { AuthContext } from '../context/AuthContext';
 import { jwtDecode } from 'jwt-decode';
 import EditIcon from '@mui/icons-material/Edit';

@@ -4,7 +4,7 @@ import {
   Box, Typography, Paper, Grid, Chip, Divider, Stack, TextField, InputAdornment,
   ToggleButton, ToggleButtonGroup, IconButton, Skeleton, Tooltip,
 } from '@mui/material';
-import Sidebar from '..//components/Layout/Sidebar';
+import Sidebar from '../../components/Layout/Sidebar';
 
 import SearchIcon from '@mui/icons-material/Search';
 import CachedIcon from '@mui/icons-material/Cached';
