@@ -17,7 +17,7 @@ import {
 } from '@mui/icons-material';
 import Sidebar from '../components/Layout/Sidebar';
 import { jwtDecode } from 'jwt-decode';
-import api from '../services/api';
+import api from '../../services/api';
 
 const DashboardAdmin = () => {
   const [stats, setStats] = useState({

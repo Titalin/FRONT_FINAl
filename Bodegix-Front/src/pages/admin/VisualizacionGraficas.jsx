@@ -16,7 +16,7 @@ import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import TimelineIcon from '@mui/icons-material/Timeline';
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, Legend, ResponsiveContainer } from 'recharts';
-import api from '../services/api';
+import api from '../../services/api';
 
 const LINE_COLORS = ['#4FC3F7', '#FFB74D', '#81C784', '#BA68C8', '#64B5F6', '#FF8A65', '#AED581', '#9575CD', '#4DB6AC', '#F06292'];
 

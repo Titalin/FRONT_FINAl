@@ -5,8 +5,8 @@ import {
   ToggleButton, IconButton, Skeleton, Tooltip,
 } from '@mui/material';
 import { Search as SearchIcon, Cached as CachedIcon, People as PeopleIcon, Business as BusinessIcon } from '@mui/icons-material';
-import Sidebar from '../components/Layout/Sidebar';
-import api from '../services/api';
+import Sidebar from '../../components/Layout/Sidebar';
+import api from '../../services/api';
 
 const roleLabel = (r) => (r === 1 ? 'SuperAdmin' : r === 2 ? 'Admin Empresa' : 'Empleado');
 const roleColor = (r) => (r === 1 ? 'secondary' : r === 2 ? 'info' : 'success');
@@ -20,7 +20,7 @@ export default function UsersPage() {
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/usuarios/admin'); // SIN /api
+      const { data } = await api.get('/usuarios/admin'); 
       setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
       const url = (err?.config?.baseURL || '') + (err?.config?.url || '');
