@@ -4,7 +4,7 @@ import {
   IconButton, Divider, InputAdornment, Tooltip, Chip,
 } from '@mui/material';
 import Sidebar from '../../components/Layout/Sidebar';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../../context/AuthContext';
 import { jwtDecode } from 'jwt-decode';
 import EditIcon from '@mui/icons-material/Edit';
 import EmailIcon from '@mui/icons-material/Email';
