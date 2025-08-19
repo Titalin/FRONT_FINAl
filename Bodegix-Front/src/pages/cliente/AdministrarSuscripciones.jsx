@@ -1,6 +1,9 @@
 // src/pages/AdministrarSuscripciones.jsx
-import React, { useEffect, useState, useCallback } from 'react';
-import { Box, Typography, Paper, Grid, Card, CardContent, Button, Chip, Alert, CircularProgress, Stack, Divider, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import {
+  Box, Typography, Paper, Grid, Card, CardContent, Button, Chip, Alert,
+  CircularProgress, Stack, Divider, List, ListItem, ListItemIcon, ListItemText
+} from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
@@ -11,7 +14,7 @@ import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import api from '../services/api';
 
 function looksLikePaypalId(s) {
-  const m = String(s || '').match(/[A-Za-z0-9\-_]{30,}/);
+  const m = String(s || '').match(/[A-Za-z0-9\-_]{20,}/);
   return m ? m[0] : '';
 }
 function extractPaypalId(raw) {
@@ -34,6 +37,7 @@ function toMoney(n) {
   const x = Number(n || 0);
   return Number.isFinite(x) ? x.toFixed(2) : '0.00';
 }
+
 const ui = {
   heroBg: 'linear-gradient(135deg, #1d4ed8 10%, #06b6d4 100%)',
   heroCardBg: 'rgba(255,255,255,0.08)',
@@ -71,8 +75,11 @@ export default function AdministrarSuscripciones() {
     }
   }, [paypalClientId]);
 
+  const paypalOptions = useMemo(
+    () => (paypalClientId ? { 'client-id': paypalClientId, currency: 'USD', intent: 'capture' } : undefined),
+    [paypalClientId]
+  );
   const HAS_PAYPAL = !!paypalClientId;
-  const paypalOptions = HAS_PAYPAL ? { 'client-id': paypalClientId, currency: 'USD', intent: 'capture' } : undefined;
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const arr = (v) => (Array.isArray(v) ? v : v && v.data ? v.data : []);
@@ -83,8 +90,10 @@ export default function AdministrarSuscripciones() {
       const planesResp = await api.get('/planes');
       const planesParsed = arr(planesResp.data);
       setPlanes(planesParsed);
+
       const status = (await api.get('/suscripciones/status', { params: { empresa_id: empresa_id_decoded } })).data;
       const activa = !!status && !!status.activa;
+
       if (!activa) {
         setSuscripcionActiva(false);
         setPlanActual(null);
@@ -92,8 +101,12 @@ export default function AdministrarSuscripciones() {
         setAlerta('No tienes una suscripción activa. Selecciona un plan para continuar.');
         return;
       }
+
       const todas = arr((await api.get('/suscripciones')).data);
-      const sActiva = (todas || []).find((s) => Number(s.empresa_id) === Number(empresa_id_decoded) && String(s.estado).toLowerCase() === 'activa');
+      const sActiva = (todas || []).find(
+        (s) => Number(s.empresa_id) === Number(empresa_id_decoded) && String(s.estado).toLowerCase() === 'activa'
+      );
+
       if (!sActiva) {
         setSuscripcionActiva(false);
         setPlanActual(null);
@@ -101,7 +114,9 @@ export default function AdministrarSuscripciones() {
         setAlerta('No tienes una suscripción activa.');
         return;
       }
+
       const plan = planesParsed.find((p) => Number(p.id) === Number(sActiva.plan_id)) || null;
+
       setSuscripcionActiva(true);
       setPlanActual(plan);
       setSuscripcionId(sActiva.id);
@@ -225,13 +240,15 @@ export default function AdministrarSuscripciones() {
                 <Box mt={3}>
                   <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, borderColor: ui.borderSoft, bgcolor: '#0b1220' }}>
                     <Typography variant="body1" gutterBottom>Pagando el plan: <b>{planSeleccionado.nombre}</b> (${toMoney(planSeleccionado.costo)})</Typography>
-                    <PayPalScriptProvider options={paypalOptions}>
+
+                    <PayPalScriptProvider key={`pp-${paypalClientId}`} options={paypalOptions}>
                       <PayPalButtons
                         key={`${planSeleccionado.id}-${planSeleccionado.costo}`}
                         style={{ layout: 'vertical' }}
                         createOrder={async () => {
                           try {
-                            const { data } = await api.post('/paypal/create-order', { amount: Number(planSeleccionado.costo || 0) });
+                            const amount = toMoney(planSeleccionado.costo);
+                            const { data } = await api.post('/paypal/create-order', { amount: Number(amount) });
                             if (!data || !data.id) throw new Error('No se recibió id de orden de PayPal.');
                             return data.id;
                           } catch (err) {
@@ -242,7 +259,10 @@ export default function AdministrarSuscripciones() {
                         onApprove={async (data) => {
                           try {
                             setLoading(true);
-                            const resp = await api.post(`/paypal/capture-order/${data.orderID}`, { empresa_id: Number(empresaId), plan_id: Number(planSeleccionado.id) });
+                            const resp = await api.post(`/paypal/capture-order/${data.orderID}`, {
+                              empresa_id: Number(empresaId),
+                              plan_id: Number(planSeleccionado.id),
+                            });
                             setAlerta((resp && resp.data && resp.data.message) || 'Pago capturado y suscripción activada.');
                             setPlanSeleccionado(null);
                             if (empresaId) await cargarDatos(empresaId);
@@ -268,6 +288,7 @@ export default function AdministrarSuscripciones() {
                   {loading ? 'Actualizando…' : 'Refrescar'}
                 </Button>
               </Stack>
+
               <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, borderColor: ui.borderSoft, bgcolor: '#0b1220' }}>
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={4}>
@@ -283,9 +304,17 @@ export default function AdministrarSuscripciones() {
                     <Typography variant="h6" fontWeight={800}>${toMoney(planActual && planActual.costo)}</Typography>
                   </Grid>
                 </Grid>
+
                 <Divider sx={{ my: 2, borderColor: ui.borderSoft }} />
+
                 <Stack direction="row" spacing={1.5}>
-                  <Button variant="outlined" color="error" disabled={loading || !suscripcionId} onClick={cancelarSuscripcion} sx={{ borderWidth: 2, fontWeight: 800 }}>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    disabled={loading || !suscripcionId}
+                    onClick={cancelarSuscripcion}
+                    sx={{ borderWidth: 2, fontWeight: 800 }}
+                  >
                     Cancelar suscripción
                   </Button>
                 </Stack>
