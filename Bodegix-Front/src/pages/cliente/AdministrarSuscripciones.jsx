@@ -1,4 +1,3 @@
-// src/pages/AdministrarSuscripciones.jsx
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box, Typography, Paper, Grid, Card, CardContent, Button, Chip, Alert,
