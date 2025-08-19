@@ -8,10 +8,10 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
-import Sidebar from '../components/Layout/Sidebar';
+import Sidebar from 'components/Layout/Sidebar';
 import { jwtDecode } from 'jwt-decode';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
-import api from '../services/api';
+import api from 'services/api';
 
 function looksLikePaypalId(s) {
   const m = String(s || '').match(/[A-Za-z0-9\-_]{20,}/);
@@ -236,7 +236,7 @@ export default function AdministrarSuscripciones() {
                 })}
               </Grid>
 
-              {planSeleccionado && HAS_PAYPAL && paypalOptions && (
+              {planSeleccionado && paypalOptions && (
                 <Box mt={3}>
                   <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, borderColor: ui.borderSoft, bgcolor: '#0b1220' }}>
                     <Typography variant="body1" gutterBottom>Pagando el plan: <b>{planSeleccionado.nombre}</b> (${toMoney(planSeleccionado.costo)})</Typography>
