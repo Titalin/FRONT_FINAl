@@ -1,34 +1,39 @@
+// src/pages/AdministrarSuscripciones.jsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Typography, Paper, Grid, Card, CardContent, Button, Chip, Alert, CircularProgress, Stack, Divider, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
-import Sidebar from '../../components/Layout/Sidebar';
+import Sidebar from '../components/Layout/Sidebar';
 import { jwtDecode } from 'jwt-decode';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
-import api from '../../services/api';
+import api from '../services/api';
 
-function extractPaypalId(raw) {
-  const s = String(raw || '').trim();
-  const stripped = s.replace(/(PAYPAL_CLIENT_ID=|PAYPAL_SANDBOX_ID=|client-id=|MONGO_URI=).*$/i, '');
-  const first = stripped.split(/[\s;&?'"`]+/)[0];
-  const m = first.match(/[A-Za-z0-9\-_]{20,}/);
+function looksLikePaypalId(s) {
+  const m = String(s || '').match(/[A-Za-z0-9\-_]{30,}/);
   return m ? m[0] : '';
 }
-
+function extractPaypalId(raw) {
+  const str = String(raw || '').trim();
+  const direct = looksLikePaypalId(str);
+  if (direct) return direct;
+  if (str.includes('=')) {
+    const after = str.split('=').pop();
+    return looksLikePaypalId(after);
+  }
+  return '';
+}
 function readPaypalClientIdFromBuild() {
-  try { if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_PAYPAL_CLIENT_ID) return extractPaypalId(import.meta.env.VITE_PAYPAL_CLIENT_ID); } catch {}
-  try { if (typeof process !== 'undefined' && process.env && process.env.REACT_APP_PAYPAL_CLIENT_ID) return extractPaypalId(process.env.REACT_APP_PAYPAL_CLIENT_ID); } catch {}
+  try { if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PAYPAL_CLIENT_ID) return extractPaypalId(import.meta.env.VITE_PAYPAL_CLIENT_ID); } catch {}
+  try { if (typeof process !== 'undefined' && process.env?.REACT_APP_PAYPAL_CLIENT_ID) return extractPaypalId(process.env.REACT_APP_PAYPAL_CLIENT_ID); } catch {}
   try { if (typeof window !== 'undefined' && window.__PAYPAL_CLIENT_ID__) return extractPaypalId(window.__PAYPAL_CLIENT_ID__); } catch {}
   return '';
 }
-
 function toMoney(n) {
   const x = Number(n || 0);
   return Number.isFinite(x) ? x.toFixed(2) : '0.00';
 }
-
 const ui = {
   heroBg: 'linear-gradient(135deg, #1d4ed8 10%, #06b6d4 100%)',
   heroCardBg: 'rgba(255,255,255,0.08)',
@@ -57,15 +62,17 @@ export default function AdministrarSuscripciones() {
 
   useEffect(() => {
     if (!paypalClientId) {
-      api.get('paypal/client-id').then(({ data }) => {
-        const id = extractPaypalId(data?.clientId || '');
-        if (id) setPaypalClientId(id);
-      }).catch(() => {});
+      api.get('/paypal/client-id')
+        .then(({ data }) => {
+          const id = looksLikePaypalId(data?.clientId || data);
+          if (id) setPaypalClientId(id);
+        })
+        .catch(() => {});
     }
   }, [paypalClientId]);
 
   const HAS_PAYPAL = !!paypalClientId;
-  const paypalOptions = HAS_PAYPAL ? { 'client-id': paypalClientId, currency: 'MXN', intent: 'capture' } : undefined;
+  const paypalOptions = HAS_PAYPAL ? { 'client-id': paypalClientId, currency: 'USD', intent: 'capture' } : undefined;
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const arr = (v) => (Array.isArray(v) ? v : v && v.data ? v.data : []);
@@ -114,7 +121,7 @@ export default function AdministrarSuscripciones() {
       if (!emp) { setAlerta('El token no contiene empresa_id.'); return; }
       setEmpresaId(emp);
       cargarDatos(emp);
-    } catch (e) {
+    } catch {
       setAlerta('Token inválido. Inicia sesión nuevamente.');
     }
   }, [token, cargarDatos]);
@@ -137,7 +144,7 @@ export default function AdministrarSuscripciones() {
     <Box display="flex">
       <Sidebar />
       <Box flexGrow={1} p={3}>
-        <Paper elevation={0} sx={{ p: 3, mb: 3, background: ui.heroBg, color: '#fff', borderRadius: 3, boxShadow: '0 12px 36px rgba(43, 43, 43, 0.3)' }}>
+        <Paper elevation={0} sx={{ p: 3, mb: 3, background: ui.heroBg, color: '#fff', borderRadius: 3, boxShadow: '0 12px 36px rgba(43,43,43,0.3)' }}>
           <Stack direction={{ xs: 'column', md: 'row' }} alignItems="center" spacing={2} justifyContent="space-between">
             <Box>
               <Stack direction="row" spacing={1.2} alignItems="center">
