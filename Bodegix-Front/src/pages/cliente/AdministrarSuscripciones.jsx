@@ -1,3 +1,4 @@
+// src/pages/cliente/AdministrarSuscripciones.jsx
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box, Typography, Paper, Grid, Card, CardContent, Button, Chip, Alert,
@@ -7,7 +8,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
-import Sidebar from '../components/Layout/Sidebar';
+import Sidebar from '../../components/Layout/Sidebar';
 import { jwtDecode } from 'jwt-decode';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import api from '../../services/api';
