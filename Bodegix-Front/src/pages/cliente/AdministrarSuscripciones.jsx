@@ -1,4 +1,3 @@
-// src/pages/Suscripciones/AdministrarSuscripciones.jsx
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box, Typography, Paper, Grid, Card, CardContent, Button, Chip, Alert,
@@ -13,47 +12,28 @@ import { jwtDecode } from 'jwt-decode';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import api from '../../services/api';
 
-function readPaypalClientId() {
+function readPaypalClientIdFromBuild() {
   try {
     if (typeof import.meta !== 'undefined' &&
         import.meta.env &&
         import.meta.env.VITE_PAYPAL_CLIENT_ID) {
       return String(import.meta.env.VITE_PAYPAL_CLIENT_ID);
     }
-  } catch (_) {}
-
+  } catch {}
   try {
     if (typeof process !== 'undefined' &&
         process.env &&
         process.env.REACT_APP_PAYPAL_CLIENT_ID) {
       return String(process.env.REACT_APP_PAYPAL_CLIENT_ID);
     }
-  } catch (_) {}
-
+  } catch {}
   try {
     if (typeof window !== 'undefined' && window.__PAYPAL_CLIENT_ID__) {
       return String(window.__PAYPAL_CLIENT_ID__);
     }
-  } catch (_) {}
-
+  } catch {}
   return '';
 }
-
-const RAW_PAYPAL_ID = readPaypalClientId();
-const PAYPAL_CLIENT_ID = String(RAW_PAYPAL_ID)
-  .replace(/[\r\n]/g, '')
-  .replace(/^['"]|['"]$/g, '')
-  .trim();
-
-const HAS_PAYPAL = PAYPAL_CLIENT_ID.length > 0;
-
-const paypalOptions = HAS_PAYPAL
-  ? {
-      'client-id': PAYPAL_CLIENT_ID,
-      currency: 'MXN',
-      intent: 'capture',
-    }
-  : undefined;
 
 function toMoney(n) {
   const x = Number(n || 0);
@@ -85,19 +65,39 @@ export default function AdministrarSuscripciones() {
   const [planSeleccionado, setPlanSeleccionado] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const [paypalClientId, setPaypalClientId] = useState(() => {
+    const raw = readPaypalClientIdFromBuild();
+    return String(raw).replace(/[\r\n]/g, '').replace(/^['"]|['"]$/g, '').trim();
+  });
+
+  useEffect(() => {
+    if (!paypalClientId) {
+      api.get('paypal/client-id')
+        .then(({ data }) => {
+          const id = String(data?.clientId || '').trim();
+          if (id) setPaypalClientId(id);
+        })
+        .catch(() => {});
+    }
+  }, [paypalClientId]);
+
+  const HAS_PAYPAL = !!paypalClientId;
+  const paypalOptions = HAS_PAYPAL ? {
+    'client-id': paypalClientId,
+    currency: 'MXN',
+    intent: 'capture',
+  } : undefined;
+
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const arr = (v) => (Array.isArray(v) ? v : v && v.data ? v.data : []);
 
   const cargarDatos = useCallback(async (empresa_id_decoded) => {
     try {
       setLoading(true);
-
-      // 1) Planes
       const planesResp = await api.get('/planes');
       const planesParsed = arr(planesResp.data);
       setPlanes(planesParsed);
 
-      // 2) Estado de suscripción
       const status = (await api.get('/suscripciones/status', { params: { empresa_id: empresa_id_decoded } })).data;
       const activa = !!status && !!status.activa;
 
@@ -109,7 +109,6 @@ export default function AdministrarSuscripciones() {
         return;
       }
 
-      // 3) Resolver suscripción activa y su plan
       const todas = arr((await api.get('/suscripciones')).data);
       const sActiva = (todas || []).find(
         (s) => Number(s.empresa_id) === Number(empresa_id_decoded) && String(s.estado).toLowerCase() === 'activa'
@@ -130,7 +129,6 @@ export default function AdministrarSuscripciones() {
       setSuscripcionId(sActiva.id);
       setAlerta('Tienes una suscripción activa.');
     } catch (err) {
-      console.error('Error al cargar planes/estado:', err);
       setAlerta((err && err.response && err.response.data && err.response.data.message) || err.message || 'Error al cargar información.');
     } finally {
       setLoading(false);
@@ -152,7 +150,6 @@ export default function AdministrarSuscripciones() {
       setEmpresaId(emp);
       cargarDatos(emp);
     } catch (e) {
-      console.error('Token inválido:', e);
       setAlerta('Token inválido. Inicia sesión nuevamente.');
     }
   }, [token, cargarDatos]);
@@ -165,7 +162,6 @@ export default function AdministrarSuscripciones() {
       setAlerta('La suscripción fue cancelada correctamente.');
       if (empresaId) await cargarDatos(empresaId);
     } catch (error) {
-      console.error('Error al cancelar:', error);
       setAlerta((error && error.response && error.response.data && error.response.data.message) || error.message || 'Error al cancelar la suscripción.');
     } finally {
       setLoading(false);
@@ -176,7 +172,6 @@ export default function AdministrarSuscripciones() {
     <Box display="flex">
       <Sidebar />
       <Box flexGrow={1} p={3}>
-        {/* HERO */}
         <Paper
           elevation={0}
           sx={{
@@ -365,7 +360,6 @@ export default function AdministrarSuscripciones() {
                             if (!data || !data.id) throw new Error('No se recibió id de orden de PayPal.');
                             return data.id;
                           } catch (err) {
-                            console.error('createOrder error:', err);
                             setAlerta(
                               (err && err.response && err.response.data && err.response.data.message) ||
                                 err.message ||
@@ -385,7 +379,6 @@ export default function AdministrarSuscripciones() {
                             setPlanSeleccionado(null);
                             if (empresaId) await cargarDatos(empresaId);
                           } catch (e) {
-                            console.error('onApprove error:', e);
                             setAlerta(
                               (e && e.response && e.response.data && e.response.data.message) ||
                                 e.message ||
@@ -396,8 +389,7 @@ export default function AdministrarSuscripciones() {
                           }
                         }}
                         onCancel={() => setPlanSeleccionado(null)}
-                        onError={(err) => {
-                          console.error('PayPal onError:', err);
+                        onError={() => {
                           setAlerta('Error en el pago con PayPal.');
                         }}
                       />
