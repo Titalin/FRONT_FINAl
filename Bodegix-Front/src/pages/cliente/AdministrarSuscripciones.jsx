@@ -33,6 +33,12 @@ function readPaypalClientIdFromBuild() {
   try { if (typeof window !== 'undefined' && window.__PAYPAL_CLIENT_ID__) return extractPaypalId(window.__PAYPAL_CLIENT_ID__); } catch {}
   return '';
 }
+function readPaypalCurrencyFromBuild() {
+  try { if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PAYPAL_CURRENCY) return String(import.meta.env.VITE_PAYPAL_CURRENCY).toUpperCase(); } catch {}
+  try { if (typeof process !== 'undefined' && process.env?.REACT_APP_PAYPAL_CURRENCY) return String(process.env.REACT_APP_PAYPAL_CURRENCY).toUpperCase(); } catch {}
+  try { if (typeof window !== 'undefined' && window.__PAYPAL_CURRENCY__) return String(window.__PAYPAL_CURRENCY__).toUpperCase(); } catch {}
+  return 'MXN'; // por defecto MXN para coincidir con el backend
+}
 function toMoney(n) {
   const x = Number(n || 0);
   return Number.isFinite(x) ? x.toFixed(2) : '0.00';
@@ -62,7 +68,10 @@ export default function AdministrarSuscripciones() {
   const [suscripcionId, setSuscripcionId] = useState(null);
   const [planSeleccionado, setPlanSeleccionado] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // PayPal
   const [paypalClientId, setPaypalClientId] = useState(() => readPaypalClientIdFromBuild());
+  const [paypalCurrency, setPaypalCurrency] = useState(() => readPaypalCurrencyFromBuild());
 
   useEffect(() => {
     if (!paypalClientId) {
@@ -70,14 +79,19 @@ export default function AdministrarSuscripciones() {
         .then(({ data }) => {
           const id = looksLikePaypalId(data?.clientId || data);
           if (id) setPaypalClientId(id);
+          // si el backend devuelve la moneda, úsala
+          if (data?.currency) setPaypalCurrency(String(data.currency).toUpperCase());
         })
         .catch(() => {});
     }
   }, [paypalClientId]);
 
   const paypalOptions = useMemo(
-    () => (paypalClientId ? { 'client-id': paypalClientId, currency: 'USD', intent: 'capture' } : undefined),
-    [paypalClientId]
+    () =>
+      paypalClientId
+        ? { 'client-id': paypalClientId, currency: paypalCurrency, intent: 'capture', components: 'buttons' }
+        : undefined,
+    [paypalClientId, paypalCurrency]
   );
   const HAS_PAYPAL = !!paypalClientId;
 
@@ -241,14 +255,18 @@ export default function AdministrarSuscripciones() {
                   <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, borderColor: ui.borderSoft, bgcolor: '#0b1220' }}>
                     <Typography variant="body1" gutterBottom>Pagando el plan: <b>{planSeleccionado.nombre}</b> (${toMoney(planSeleccionado.costo)})</Typography>
 
-                    <PayPalScriptProvider key={`pp-${paypalClientId}`} options={paypalOptions}>
+                    {/* key incluye clientId y currency para forzar reset cuando cambie */}
+                    <PayPalScriptProvider key={`pp-${paypalClientId}-${paypalCurrency}`} options={paypalOptions}>
                       <PayPalButtons
-                        key={`${planSeleccionado.id}-${planSeleccionado.costo}`}
+                        key={`${planSeleccionado.id}-${planSeleccionado.costo}-${paypalCurrency}`}
                         style={{ layout: 'vertical' }}
                         createOrder={async () => {
                           try {
                             const amount = toMoney(planSeleccionado.costo);
-                            const { data } = await api.post('/paypal/create-order', { amount: Number(amount) });
+                            const { data } = await api.post('/paypal/create-order', {
+                              amount: Number(amount),
+                              currency: paypalCurrency
+                            });
                             if (!data || !data.id) throw new Error('No se recibió id de orden de PayPal.');
                             return data.id;
                           } catch (err) {
